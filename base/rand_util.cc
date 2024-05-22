@@ -32,6 +32,16 @@
 
 #endif  // BUILDFLAG(IS_WIN)
 
+#if defined(_GAMING_XBOX_XBOXONE) || defined(_GAMING_XBOX_SCARLETT)
+	#pragma comment(lib, "xgameplatform.lib")
+	#pragma comment(lib, "xmem.lib")
+	#include <psapi.h>
+	#include <xmem.h>
+	#include <windows.h>
+	#include <bcrypt.h>
+	#pragma comment(lib, "bcrypt.lib")
+#endif
+
 #if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_FUCHSIA)
 
 namespace {
@@ -115,6 +125,16 @@ void RandBytes(void* output, size_t output_length) {
   int fd = GetUrandomFD();
   bool success = ReadFromFD(fd, static_cast<char*>(output), output_length);
   CHECK(success);
+#elif defined(_GAMING_XBOX_XBOXONE) || defined(_GAMING_XBOX_SCARLETT)
+  char* output_ptr = static_cast<char*>(output);
+  while (output_length > 0) {
+    const ULONG output_bytes_this_pass = static_cast<ULONG>(std::min(
+        output_length, static_cast<size_t>(std::numeric_limits<ULONG>::max())));
+    NTSTATUS status = BCryptGenRandom(NULL, (PUCHAR)output_ptr, output_bytes_this_pass, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    CHECK(status == 0);  // STATUS_SUCCESS is 0
+    output_length -= output_bytes_this_pass;
+    output_ptr += output_bytes_this_pass;
+  }
 #elif BUILDFLAG(IS_WIN)
   char* output_ptr = static_cast<char*>(output);
   while (output_length > 0) {
