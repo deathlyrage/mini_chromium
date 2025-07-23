@@ -12,7 +12,7 @@
 
 namespace base::numerics::internal {
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) && __GNUC__ >= 9) || defined(__clang__)
 inline constexpr bool cxx17_is_constant_evaluated() noexcept {
   return __builtin_is_constant_evaluated();
 }
